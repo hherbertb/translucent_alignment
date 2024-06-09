@@ -1,7 +1,7 @@
 from pm4py import read_pnml
 
 from translucent_reachability_graph import TranslucentReachabilityGraph, TranslucentAlignmentStateGraph
-from utils_graphs import create_translucent_trace
+from utils import create_translucent_trace
 
 
 if __name__ == '__main__':

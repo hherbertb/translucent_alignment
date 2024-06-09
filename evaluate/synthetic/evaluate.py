@@ -238,7 +238,7 @@ def main():
     plt.grid(True)
 
     # Show the plot
-    plt.savefig('measured_times.pdf', format='pdf', bbox_inches='tight')
+    plt.savefig('measured_times_bigger.pdf', format='pdf', bbox_inches='tight')
 
 
 main()
