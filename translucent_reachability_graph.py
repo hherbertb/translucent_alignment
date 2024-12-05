@@ -163,14 +163,22 @@ class TranslucentAlignmentStateGraph(nx.MultiDiGraph):
 
     def get_optimal_alignment(self) -> AlignmentResult:
         alignment = []
+        translucent_alignment = []
         cost = 0
+        trace_idx = 0
         for u, v in nx.utils.pairwise(nx.dijkstra_path(self, self.initial_state, self.final_state, weight='cost')):
             edge = (u, v, min(self[u][v], key=lambda k: self[u][v][k].get('cost', 1)))
             edge_data = self.edges[edge]
             if (firing_sequence := edge_data.get('firing_sequence')) and firing_sequence[-1] == ARTIFICIAL_END_TRANSITION_NAME:
                 continue
+            # Add silent moves to the alignment
             alignment.extend([(SKIP, None)] * (len(firing_sequence) - 1))
+            translucent_alignment.extend([(SKIP, None)] * (len(firing_sequence) - 1))
+            # Add other moves to the alignment
             alignment.append((label if (label := edge_data.get('label')) else SKIP, self.transition_labels[firing_sequence[-1]] if firing_sequence else SKIP))
+            translucent_alignment.append(((label if label else SKIP, self.trace[trace_idx]['enabled'] if label else set()), (self.transition_labels[firing_sequence[-1]] if firing_sequence else SKIP, self.nodes[u]['enabled'])))
+            if label:
+                trace_idx += 1
             cost += edge_data.get('cost')
         return {
             'alignment': alignment,
@@ -180,4 +188,6 @@ class TranslucentAlignmentStateGraph(nx.MultiDiGraph):
             'traversed_arcs': len(self.edges),
             'lp_solved': 0,
             'fitness': 1 - cost / self.best_worst_cost,
+            # Additionally add the translucent alignment to the result
+            'translucent_alignment': translucent_alignment,
         }

@@ -73,4 +73,5 @@ if __name__ == '__main__':
             event["enabled"] = {ea.strip() for ea in str(event["enabled_activities"]).split(",")}
 
     for trace in event_log:
-        print(align(trace, trg))
+        translucent_alignment = align(trace, trg)
+        print(f"Cost: {translucent_alignment['cost']:7.3f},  Fitness: {translucent_alignment['fitness']:5.3f},  Translucent Alignment: {translucent_alignment['translucent_alignment']}")
