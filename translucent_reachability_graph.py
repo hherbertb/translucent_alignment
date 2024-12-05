@@ -95,7 +95,7 @@ class TranslucentAlignmentStateGraph(nx.MultiDiGraph):
         self.final_state = (len(trace), 1)
         self.transition_labels = translucent_reachability_graph.transition_labels
 
-        def enabled_set_cost(enabled_set_trace: set[str, ...], enabled_set_model: set[str, ...]) -> float:
+        def enabled_set_cost(enabled_set_trace: set[str], enabled_set_model: set[str]) -> float:
             return 1 - tversky_index(enabled_set_trace, enabled_set_model)
 
         # Add arcs corresponding to moves on model

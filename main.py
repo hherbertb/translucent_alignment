@@ -4,7 +4,7 @@ from pm4py import read_pnml, PetriNet, format_dataframe, discover_process_tree_i
 
 from translucent_alignment import align
 from translucent_reachability_graph import TranslucentReachabilityGraph, TranslucentAlignmentStateGraph
-from utils import create_translucent_trace
+from utils import create_translucent_trace, visualize_translucent_alignment
 
 
 def example():
@@ -75,3 +75,5 @@ if __name__ == '__main__':
     for trace in event_log:
         translucent_alignment = align(trace, trg)
         print(f"Cost: {translucent_alignment['cost']:7.3f},  Fitness: {translucent_alignment['fitness']:5.3f},  Translucent Alignment: {translucent_alignment['translucent_alignment']}")
+        visualize_translucent_alignment(translucent_alignment['translucent_alignment'])
+        break
