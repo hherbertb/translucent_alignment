@@ -23,7 +23,7 @@ def manipulate_log(df, selection_percentage):
             activity_to_remove = np.random.choice(enabled_activities)
 
             # Check if the removed activity is the same as the one in 'activity' column
-            if str(activity_to_remove) == str(row['activity']):
+            if str(activity_to_remove) == str(row['concept:name']):
                 return True  # Mark for deletion
 
             # Remove selected activity from enabled_activities list

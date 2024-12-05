@@ -13,7 +13,7 @@ def manipulate_log(df, selection_percentage):
     selected_indices = np.random.choice(df.index, size=num_rows_to_select, replace=True)
 
     # Get all unique activities from the event log for replacement
-    all_activities = set(df['activity'].unique())
+    all_activities = set(df['concept:name'].unique())
 
     def modify_selected_row(row):
         enabled_activities = [el.strip() for el in row['enabled_activities'].split(',')]
@@ -36,8 +36,8 @@ def manipulate_log(df, selection_percentage):
             remaining_activities_set.add(new_activity)  # Add new activity
 
             # Check if we need to update the executed activity as well
-            if str(row['activity']) == str(activity_to_replace):
-                row['activity'] = new_activity
+            if str(row['concept:name']) == str(activity_to_replace):
+                row['concept:name'] = new_activity
 
             # Update remaining enabled activities back to string format without duplicates
             row['enabled_activities'] = ','.join(remaining_activities_set)

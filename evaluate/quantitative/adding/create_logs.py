@@ -12,7 +12,7 @@ def manipulate_log(df, selection_percentage, addition_percentage):
     # Randomly select rows with replacement
     selected_indices = np.random.choice(df.index, size=num_rows_to_select, replace=True)
 
-    all_activities = set(df['activity'].unique())
+    all_activities = set(df['concept:name'].unique())
 
     def modify_selected_row(row):
         enabled_activities = [el.strip() for el in row['enabled_activities'].split(',')]
@@ -46,8 +46,8 @@ def manipulate_log(df, selection_percentage, addition_percentage):
             random_index = np.random.choice(existing_df.index)
 
             # Get caseid and timestamp from the randomly selected row
-            selected_caseid = existing_df['case'].iloc[random_index]
-            selected_timestamp = existing_df['timestamp'].iloc[random_index]
+            selected_caseid = existing_df['case:concept:name'].iloc[random_index]
+            selected_timestamp = existing_df['time:timestamp'].iloc[random_index]
 
             # Select number of enabled activities based on weighted choices
             num_enabled_activities = np.random.choice(choices, p=weights / weights.sum())
@@ -60,9 +60,9 @@ def manipulate_log(df, selection_percentage, addition_percentage):
 
             # Create a dictionary representing the new row/event
             new_row = {
-                'case': selected_caseid,
-                'activity': executed_activity,
-                'timestamp': selected_timestamp,
+                'case:concept:name': selected_caseid,
+                'concept:name': executed_activity,
+                'time:timestamp': selected_timestamp,
                 'enabled_activities': ','.join(enabled_activities_sample)  # Convert list back to comma-separated string
             }
 
