@@ -53,15 +53,15 @@ def example():
 
 if __name__ == '__main__':
     # example()
-    event_log = format_dataframe(pd.read_csv("./data/road_traffic/04/ground_truth.csv"),
+    event_log = format_dataframe(pd.read_csv("./evaluate/quantitative/ground_truth.csv"),
                                  case_id="case:concept:name",
                                  activity_key="concept:name",
                                  timestamp_key="time:timestamp",
                                  timest_format="%Y-%m-%d %H:%M:%S%z",
                                  )
-    process_tree = discover_process_tree_inductive(event_log, noise_threshold=0.4)
+    process_tree = discover_process_tree_inductive(event_log)
     trg = TranslucentReachabilityGraph(convert_to_petri_net(process_tree))
-    event_log = convert_to_event_log(format_dataframe(pd.read_csv("./data/road_traffic/04/1.csv"),
+    event_log = convert_to_event_log(format_dataframe(pd.read_csv("./evaluate/quantitative/final_log.csv"),
                                                       case_id="case:concept:name",
                                                       activity_key="concept:name",
                                                       timestamp_key="time:timestamp",
@@ -72,8 +72,6 @@ if __name__ == '__main__':
         for event in trace:
             event["enabled"] = {ea.strip() for ea in str(event["enabled_activities"]).split(",")}
 
-    for trace in event_log:
+    for idx, trace in enumerate(event_log):
         translucent_alignment = align(trace, trg)
-        print(f"Cost: {translucent_alignment['cost']:7.3f},  Fitness: {translucent_alignment['fitness']:5.3f},  Translucent Alignment: {translucent_alignment['translucent_alignment']}")
-        visualize_translucent_alignment(translucent_alignment['translucent_alignment'])
-        break
+        print(f"{idx+1}/{len(event_log)}:  Cost: {translucent_alignment['cost']:7.3f},  Fitness: {translucent_alignment['fitness']:5.3f},  Translucent Alignment: {translucent_alignment['translucent_alignment']}")
