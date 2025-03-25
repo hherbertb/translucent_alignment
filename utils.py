@@ -34,6 +34,18 @@ def add_artificial_end_transition(accepting_petri_net: tuple[PetriNet, Marking, 
     return accepting_petri_net[0], accepting_petri_net[1], place_set_as_marking([artificial_final_place])
 
 
+def get_translucent_trace_variants(event_log: EventLog
+                                   ) -> dict[tuple[tuple[str, frozenset[str]], ...], tuple[Trace, list[int]]]:
+    variants: dict[tuple[tuple[str, frozenset[str]], ...], tuple[Trace, list[int]]] = {}
+    for idx, trace in enumerate(event_log):
+        variant = tuple((event["concept:name"], frozenset(event["enabled"])) for event in trace)
+        if variant not in variants:
+            variants[variant] = (trace, [idx])
+        else:
+            variants[variant][1].append(idx)
+    return variants
+
+
 def draw_chevron(ax, x, y,
                  translucent_move: tuple[str | tuple[str, set[str]], None | str | tuple[str, set[str]]],
                  width: float = 1.,
