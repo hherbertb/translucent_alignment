@@ -36,7 +36,8 @@ if __name__ == '__main__':
     #translucent_trace = create_translucent_trace([("A", {"A"}), ("B", {"B"}), ("D", {"D"}), ("E", {"E", "F", "G"}), ("G", {"G"})])
     #translucent_trace = create_translucent_trace([("A", {"A"}), ("B", {"B", "C"}), ("D", {"D"}), ("E", {"E", "F", "G"}), ("G", {"G"})])
     #translucent_trace = create_translucent_trace([("A", {"A"}), ("B", {"B"}), ("D", {"D"}), ("E", {"E", "G"}), ("G", {"G"})])
-    translucent_trace = create_translucent_trace([("A", {"A"}), ("B", {"B"}), ("D", {"D"}), ("X", {"X", "E", "G"}), ("G", {"G"})])
+    #translucent_trace = create_translucent_trace([("A", {"A"}), ("B", {"B"}), ("D", {"D"}), ("X", {"X", "E", "G"}), ("G", {"G"})])
+    translucent_trace = create_translucent_trace([("A", {"A"}), ("B", {"B"}), ("D", {"D"}), ("E", {"E", "F", "G"}), ("E", {"E", "F"})])
     #translucent_trace = create_translucent_trace([("A", {"A"}), ("B", {"B"}), ("E", {"E", "F", "G"}), ("G", {"G"})])
     from pm4py.algo.conformance.alignments.petri_net.algorithm import apply as alignments
     alignment = alignments(translucent_trace, *accepting_petri_net)
