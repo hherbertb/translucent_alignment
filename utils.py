@@ -3,7 +3,7 @@ from typing import Optional
 
 from matplotlib import patches, pyplot as plt
 from pm4py import PetriNet, Marking
-from pm4py.objects.log.obj import Trace, Event
+from pm4py.objects.log.obj import Trace, Event, EventLog
 from pm4py.objects.petri_net.utils.align_utils import SKIP
 from pm4py.objects.petri_net.utils.petri_utils import add_place, add_transition, add_arc_from_to, place_set_as_marking
 
@@ -45,7 +45,7 @@ def get_translucent_trace_variants(event_log: EventLog
             variants[variant][1].append(idx)
     return variants
 
-
+"""
 def draw_chevron(ax, x, y,
                  translucent_move: tuple[str | tuple[str, set[str]], None | str | tuple[str, set[str]]],
                  width: float = 1.,
@@ -89,3 +89,4 @@ def visualize_translucent_alignment(translucent_alignment: list[tuple[str | tupl
         draw_chevron(ax, scale * i, 0, move, scale)
 
     plt.show()
+"""
