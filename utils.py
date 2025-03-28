@@ -57,7 +57,7 @@ def draw_chevron(ax, x, y,
     model_activity, model_enabled = translucent_move[1] if isinstance(translucent_move[1], tuple) else (translucent_move[1], None)
     color = 'lightgreen' if log_activity == model_activity and log_enabled == model_enabled else\
         'lightgrey' if log_activity == SKIP and model_activity is None else\
-        'lightorange' if log_activity == SKIP else\
+        'orange' if log_activity == SKIP else\
         'lightblue' if model_activity is SKIP else\
         'lightcoral' if log_activity != model_activity else\
         'lightpink' if log_enabled != model_enabled else 'black'
@@ -79,14 +79,14 @@ def draw_chevron(ax, x, y,
     ax.text(x, y - height2 / 2, f"{model_activity}\n{model_enabled}", ha='center', va='center', fontsize=8)
 
 
-def visualize_translucent_alignment(translucent_alignment: list[tuple[str | tuple[str, set[str]], None | str | tuple[str, set[str]]]], scale: float = 1.) -> None:
-    fig, ax = plt.subplots(figsize=(scale * len(translucent_alignment) * 5, 5))
-    ax.set_xlim(-1, scale * len(translucent_alignment))
+def visualize_translucent_alignment(translucent_alignment: list[tuple[str | tuple[str, set[str]], None | str | tuple[str, set[str]]]], overlap: float = 0., scale: float = 1.) -> None:
+    fig, ax = plt.subplots(figsize=(scale * len(translucent_alignment) * (1. - overlap) * 5, 5))
+    ax.set_xlim(-1, scale * len(translucent_alignment) * (1. - overlap))
     ax.set_ylim(-1, 1)
     ax.axis('off')
 
     for i, move in enumerate(translucent_alignment):
-        draw_chevron(ax, scale * i, 0, move, scale)
+        draw_chevron(ax, scale * i * (1. - overlap), 0, move, scale)
 
     plt.show()
 """

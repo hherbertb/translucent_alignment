@@ -107,6 +107,7 @@ class TranslucentAlignmentStateGraph(nx.MultiDiGraph):
                               firing_sequence=translucent_reachability_graph.edges[edge]['firing_sequence'],
                               label=None,
                               cost=translucent_reachability_graph.edges[edge]['cost'],
+                              classical_cost=translucent_reachability_graph.edges[edge]['cost'],
                               type='model')
         # Add arcs corresponding to moves on log
         for idx in range(len(trace)):
@@ -115,6 +116,7 @@ class TranslucentAlignmentStateGraph(nx.MultiDiGraph):
                               firing_sequence=(),
                               label=trace[idx].get('concept:name'),
                               cost=1,
+                              classical_cost=1,
                               type='log')
         # Add arcs corresponding to synchronous moves
         for idx in range(len(trace)):
@@ -124,6 +126,7 @@ class TranslucentAlignmentStateGraph(nx.MultiDiGraph):
                                   firing_sequence=edge[2]['firing_sequence'],
                                   label=trace[idx].get('concept:name'),
                                   cost=enabled_set_cost(trace[idx].get('enabled'), translucent_reachability_graph.nodes[edge[0]]['enabled']),
+                                  classical_cost=0,
                                   type='sync')
         # Add arcs corresponding to execution change moves
                 elif edge[2]['label'] != ARTIFICIAL_END_TRANSITION_LABEL:
@@ -131,6 +134,7 @@ class TranslucentAlignmentStateGraph(nx.MultiDiGraph):
                                   firing_sequence=edge[2]['firing_sequence'],
                                   label=trace[idx].get('concept:name'),
                                   cost=1+enabled_set_cost(trace[idx].get('enabled'), translucent_reachability_graph.nodes[edge[0]]['enabled']),
+                                  classical_cost=3,
                                   type='change')
 
     def view(self) -> None:
@@ -158,28 +162,57 @@ class TranslucentAlignmentStateGraph(nx.MultiDiGraph):
             f.write(str(soup))
             f.truncate()
 
-    def get_optimal_alignment_cost(self) -> float:
-        return nx.dijkstra_path_length(self, self.initial_state, self.final_state, weight='cost')
+    def get_optimal_alignment_cost(self, ignore_translucent: bool = False) -> float:
+        return nx.dijkstra_path_length(self, self.initial_state, self.final_state, weight='classical_cost' if ignore_translucent else 'cost')
 
-    def get_optimal_alignment(self) -> AlignmentResult:
+    def get_optimal_alignment(self, ignore_translucent: bool = False) -> AlignmentResult:
         alignment = []
         translucent_alignment = []
         cost = 0
+        move_cost = []
         trace_idx = 0
-        for u, v in nx.utils.pairwise(nx.dijkstra_path(self, self.initial_state, self.final_state, weight='cost')):
-            edge = (u, v, min(self[u][v], key=lambda k: self[u][v][k].get('cost', 1)))
+        n_sync, n_log, n_model, n_silent, n_enabled_change, n_execution_change, n_execution_enabled_change = 0, 0, 0, 0, 0, 0, 0
+        for u, v in nx.utils.pairwise(nx.dijkstra_path(self, self.initial_state, self.final_state, weight='classical_cost' if ignore_translucent else 'cost')):
+            edge = (u, v, min(self[u][v], key=lambda k: self[u][v][k].get('classical_cost' if ignore_translucent else 'cost', 1)))
             edge_data = self.edges[edge]
             if (firing_sequence := edge_data.get('firing_sequence')) and firing_sequence[-1] == ARTIFICIAL_END_TRANSITION_NAME:
                 continue
             # Add silent moves to the alignment
             alignment.extend([(SKIP, None)] * (len(firing_sequence) - 1))
             translucent_alignment.extend([(SKIP, None)] * (len(firing_sequence) - 1))
+            move_cost.extend([0] * (len(firing_sequence) - 1))
+            n_silent += len(firing_sequence) - 1 if len(firing_sequence) > 1 else 0
             # Add other moves to the alignment
             alignment.append((label if (label := edge_data.get('label')) else SKIP, self.transition_labels[firing_sequence[-1]] if firing_sequence else SKIP))
             translucent_alignment.append(((label if label else SKIP, self.trace[trace_idx]['enabled'] if label else set()), (self.transition_labels[firing_sequence[-1]] if firing_sequence else SKIP, self.nodes[u]['enabled'])))
             if label:
+                if firing_sequence:
+                    # Synchronous move, enabled change move, execution change move, execution enabled change move
+                    if self.transition_labels[firing_sequence[-1]] == label:
+                        # Synchronous move, enabled change move
+                        if self.trace[trace_idx]['enabled'] == self.nodes[u]['enabled']:
+                            # Synchronous move
+                            n_sync += 1
+                        else:
+                            # Enabled change move
+                            n_enabled_change += 1
+                    else:
+                        # Execution change move, execution enabled change move
+                        if self.trace[trace_idx]['enabled'] == self.nodes[u]['enabled']:
+                            # Execution change move
+                            n_execution_change += 1
+                        else:
+                            # Execution enabled change move
+                            n_execution_enabled_change += 1
+                else:
+                    # Log move
+                    n_log += 1
                 trace_idx += 1
-            cost += edge_data.get('cost')
+            else:
+                # Model move
+                n_model += 1
+            cost += edge_data.get('classical_cost' if ignore_translucent else 'cost')
+            move_cost.append(edge_data.get('classical_cost' if ignore_translucent else 'cost'))
         return {
             'alignment': alignment,
             'cost': cost,
@@ -190,4 +223,12 @@ class TranslucentAlignmentStateGraph(nx.MultiDiGraph):
             'fitness': 1 - cost / self.best_worst_cost,
             # Additionally add the translucent alignment to the result
             'translucent_alignment': translucent_alignment,
+            'move_cost': move_cost,
+            'n_sync': n_sync,
+            'n_log': n_log,
+            'n_model': n_model,
+            'n_silent': n_silent,
+            'n_enabled_change': n_enabled_change,
+            'n_execution_change': n_execution_change,
+            'n_execution_enabled_change': n_execution_enabled_change,
         }

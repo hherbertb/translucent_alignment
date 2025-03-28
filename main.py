@@ -72,6 +72,8 @@ if __name__ == '__main__':
         for event in trace:
             event["enabled"] = {ea.strip() for ea in str(event["enabled_activities"]).split(",")}
 
+    print(f"idx; cost; fitness; n_sync; n_log; n_model; n_silent; n_enabled_change; n_execution_change; n_execution_enabled_change; translucent_alignment; move_cost")
     for idx, trace in enumerate(event_log):
         translucent_alignment = align(trace, trg)
-        print(f"{idx+1}/{len(event_log)}:  Cost: {translucent_alignment['cost']:7.3f},  Fitness: {translucent_alignment['fitness']:5.3f},  Translucent Alignment: {translucent_alignment['translucent_alignment']}")
+        print(f"{idx}; {translucent_alignment['cost']}; {translucent_alignment['fitness']}; {translucent_alignment['n_sync']}; {translucent_alignment['n_log']}; {translucent_alignment['n_model']}; {translucent_alignment['n_silent']}; {translucent_alignment['n_enabled_change']}; {translucent_alignment['n_execution_change']}; {translucent_alignment['n_execution_enabled_change']}; {translucent_alignment['translucent_alignment']}; {translucent_alignment['move_cost']}")
+        # print(f"{idx+1}/{len(event_log)}:  Cost: {translucent_alignment['cost']:7.3f},  Fitness: {translucent_alignment['fitness']:5.3f},  Translucent Alignment: {translucent_alignment['translucent_alignment']}")
