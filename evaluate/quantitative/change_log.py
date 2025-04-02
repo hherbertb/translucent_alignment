@@ -1,7 +1,7 @@
 import pandas as pd
 from removing.create_logs import manipulate_log as removing
 from changing.create_logs import manipulate_log as changing
-from adding.create_logs import manipulate_log as adding
+from adding.add_events import manipulate_log as adding
 
 
 file_path = "ground_truth.csv"

@@ -1,13 +1,16 @@
-from pm4py import read_pnml
-from pm4py.objects.petri_net.obj import PetriNet
-from translucent_reachability_graph import TranslucentReachabilityGraph, TranslucentAlignmentStateGraph
-from utils import create_translucent_trace
-import pm4py
+import pandas as pd
+from pm4py import read_pnml, PetriNet, format_dataframe, discover_process_tree_inductive, convert_to_petri_net, \
+    convert_to_event_log
 
-if __name__ == '__main__':
+from translucent_alignment import align
+from translucent_reachability_graph import TranslucentReachabilityGraph, TranslucentAlignmentStateGraph
+from utils import create_translucent_trace, visualize_translucent_alignment
+
+
+def example():
     accepting_petri_net = read_pnml("./data/running_example.pnml")
 
-    #translucent_trace = create_translucent_trace([("A", {"A", "B"}), ("B", {"B"}), ("C", {"C"})])
+    # translucent_trace = create_translucent_trace([("A", {"A", "B"}), ("B", {"B"}), ("C", {"C"})])
 
     # find places for modification
     source_place = [place for place in accepting_petri_net[0].places if place.name == "n4"][0]
@@ -33,17 +36,45 @@ if __name__ == '__main__':
     arc4 = PetriNet.Arc(place1, silent_transition)
     accepting_petri_net[0].arcs.add(arc4)
 
-    #translucent_trace = create_translucent_trace([("A", {"A"}), ("B", {"B"}), ("D", {"D"}), ("E", {"E", "F", "G"}), ("G", {"G"})])
-    #translucent_trace = create_translucent_trace([("A", {"A"}), ("B", {"B", "C"}), ("D", {"D"}), ("E", {"E", "F", "G"}), ("G", {"G"})])
-    #translucent_trace = create_translucent_trace([("A", {"A"}), ("B", {"B"}), ("D", {"D"}), ("E", {"E", "G"}), ("G", {"G"})])
-    #translucent_trace = create_translucent_trace([("A", {"A"}), ("B", {"B"}), ("D", {"D"}), ("X", {"X", "E", "G"}), ("G", {"G"})])
-    translucent_trace = create_translucent_trace([("A", {"A"}), ("B", {"B"}), ("D", {"D"}), ("E", {"E", "F", "G"}), ("E", {"E", "F"})])
-    #translucent_trace = create_translucent_trace([("A", {"A"}), ("B", {"B"}), ("E", {"E", "F", "G"}), ("G", {"G"})])
+    # translucent_trace = create_translucent_trace([("A", {"A"}), ("B", {"B"}), ("D", {"D"}), ("E", {"E", "F", "G"}), ("G", {"G"})])
+    # translucent_trace = create_translucent_trace([("A", {"A"}), ("B", {"B", "C"}), ("D", {"D"}), ("E", {"E", "F", "G"}), ("G", {"G"})])
+    # translucent_trace = create_translucent_trace([("A", {"A"}), ("B", {"B"}), ("D", {"D"}), ("E", {"E", "G"}), ("G", {"G"})])
+    translucent_trace = create_translucent_trace(
+        [("A", {"A"}), ("B", {"B"}), ("D", {"D"}), ("X", {"X", "E", "G"}), ("G", {"G"})])
+    # translucent_trace = create_translucent_trace([("A", {"A"}), ("B", {"B"}), ("E", {"E", "F", "G"}), ("G", {"G"})])
     from pm4py.algo.conformance.alignments.petri_net.algorithm import apply as alignments
     alignment = alignments(translucent_trace, *accepting_petri_net)
     trg = TranslucentReachabilityGraph(accepting_petri_net)
-    #trg.view()
+    trg.view()
     tasg = TranslucentAlignmentStateGraph(TranslucentReachabilityGraph(accepting_petri_net), translucent_trace)
-    #tasg.view()
+    tasg.view()
     a = tasg.get_optimal_alignment()
     print(a)
+
+
+if __name__ == '__main__':
+    # example()
+    event_log = format_dataframe(pd.read_csv("./evaluate/quantitative/ground_truth.csv"),
+                                 case_id="case:concept:name",
+                                 activity_key="concept:name",
+                                 timestamp_key="time:timestamp",
+                                 timest_format="%Y-%m-%d %H:%M:%S%z",
+                                 )
+    process_tree = discover_process_tree_inductive(event_log)
+    trg = TranslucentReachabilityGraph(convert_to_petri_net(process_tree))
+    event_log = convert_to_event_log(format_dataframe(pd.read_csv("./evaluate/quantitative/final_log.csv"),
+                                                      case_id="case:concept:name",
+                                                      activity_key="concept:name",
+                                                      timestamp_key="time:timestamp",
+                                                      timest_format="%Y-%m-%d %H:%M:%S%z",
+                                                      ))
+    # Convert enabled activities to sets
+    for trace in event_log:
+        for event in trace:
+            event["enabled"] = {ea.strip() for ea in str(event["enabled_activities"]).split(",")}
+
+    print(f"idx; cost; fitness; n_sync; n_log; n_model; n_silent; n_enabled_change; n_execution_change; n_execution_enabled_change; translucent_alignment; move_cost")
+    for idx, trace in enumerate(event_log):
+        translucent_alignment = align(trace, trg)
+        print(f"{idx}; {translucent_alignment['cost']}; {translucent_alignment['fitness']}; {translucent_alignment['n_sync']}; {translucent_alignment['n_log']}; {translucent_alignment['n_model']}; {translucent_alignment['n_silent']}; {translucent_alignment['n_enabled_change']}; {translucent_alignment['n_execution_change']}; {translucent_alignment['n_execution_enabled_change']}; {translucent_alignment['translucent_alignment']}; {translucent_alignment['move_cost']}")
+        # print(f"{idx+1}/{len(event_log)}:  Cost: {translucent_alignment['cost']:7.3f},  Fitness: {translucent_alignment['fitness']:5.3f},  Translucent Alignment: {translucent_alignment['translucent_alignment']}")

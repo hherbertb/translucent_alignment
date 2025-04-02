@@ -49,5 +49,5 @@ def manipulate_log(df, selection_percentage):
         df.loc[index] = modify_selected_row(df.loc[index])
 
     # Save modified DataFrame back to a new CSV file (optional)
-    df.to_csv('log_after_changing.csv', index=False)
+    #df.to_csv('log_after_changing.csv', index=False)
     return df
