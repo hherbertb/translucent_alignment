@@ -43,5 +43,4 @@ def manipulate_log(df, selection_percentage):
     df_cleaned = df.drop(index=indices_to_drop)
 
     # Save cleaned DataFrame back to a new CSV file (optional)
-    df_cleaned.to_csv('log_after_removing.csv', index=False)
     return df_cleaned

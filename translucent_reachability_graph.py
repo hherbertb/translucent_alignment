@@ -1,14 +1,14 @@
 from typing import Optional
 
 import networkx as nx
-from bs4 import BeautifulSoup
+#from bs4 import BeautifulSoup
 from pm4py import PetriNet, Marking
 from pm4py.algo.analysis.workflow_net.algorithm import apply as is_workflow_net
 from pm4py.objects.log.obj import Trace
 from pm4py.objects.petri_net.semantics import enabled_transitions, execute
 from pm4py.objects.petri_net.utils.align_utils import SKIP
 from pm4py.util.typing import AlignmentResult
-from pyvis.network import Network
+#from pyvis.network import Network
 
 from utils import add_artificial_end_transition, ARTIFICIAL_END_TRANSITION_NAME, ARTIFICIAL_END_TRANSITION_LABEL
 
@@ -60,7 +60,7 @@ class TranslucentReachabilityGraph(nx.MultiDiGraph):
                 self.add_edge(current_node, self.marking_map[post_marking], firing_sequence=arc[2], label=arc[3],
                               cost=0 if arc[2][-1] == ARTIFICIAL_END_TRANSITION_NAME else 1)
         self.best_worst_cost = nx.dijkstra_path_length(self, self.initial_state, self.final_state, weight='cost')
-
+    """
     def view(self) -> None:
         net = Network(width='100%', height='100%', directed=True)
         for node in self.nodes:
@@ -80,7 +80,7 @@ class TranslucentReachabilityGraph(nx.MultiDiGraph):
             f.seek(0)
             f.write(str(soup))
             f.truncate()
-
+    """
 
 def tversky_index(set1: set, set2: set, alpha: float = 1, beta: float = 1) -> float:
     return len(set1.intersection(set2)) / (len(set1.intersection(set2)) + alpha * len(set1.difference(set2)) + beta * len(set2.difference(set1)))
@@ -136,7 +136,7 @@ class TranslucentAlignmentStateGraph(nx.MultiDiGraph):
                                   cost=1+enabled_set_cost(trace[idx].get('enabled'), translucent_reachability_graph.nodes[edge[0]]['enabled']),
                                   classical_cost=3,
                                   type='change')
-
+    """
     def view(self) -> None:
         net = Network(width='100%', height='100%', directed=True)
         for node in self.nodes(data=True):
@@ -150,7 +150,7 @@ class TranslucentAlignmentStateGraph(nx.MultiDiGraph):
                          title=f"{edge[2]['firing_sequence']}: {edge[2]['cost']}",
                          color='green' if edge[2]['type'] == 'sync' else 'black' if edge[2]['type'] == 'log' else 'orange' if edge[2]['type'] == 'change' else 'blue')
         net.show('./output/tasg.html')
-
+        
         # Open the HTML file and parse it with BeautifulSoup
         with open('./output/tasg.html', 'r+') as f:
             soup = BeautifulSoup(f, 'html.parser')
@@ -161,7 +161,7 @@ class TranslucentAlignmentStateGraph(nx.MultiDiGraph):
             f.seek(0)
             f.write(str(soup))
             f.truncate()
-
+    """
     def get_optimal_alignment_cost(self, ignore_translucent: bool = False) -> float:
         return nx.dijkstra_path_length(self, self.initial_state, self.final_state, weight='classical_cost' if ignore_translucent else 'cost')
 
