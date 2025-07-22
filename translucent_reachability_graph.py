@@ -14,7 +14,10 @@ from utils import add_artificial_end_transition, ARTIFICIAL_END_TRANSITION_NAME,
 
 
 class TranslucentReachabilityGraph(nx.MultiDiGraph):
-    def __init__(self, accepting_petri_net: tuple[PetriNet, Marking, Marking]):
+    def __init__(self,
+                 accepting_petri_net: tuple[PetriNet, Marking, Marking],
+                 activity_weights: Optional[dict[str, float]] = None,
+                 ):
         if not is_workflow_net(accepting_petri_net[0]):
             raise ValueError("The Petri net is not a workflow net")
 
@@ -58,7 +61,8 @@ class TranslucentReachabilityGraph(nx.MultiDiGraph):
                 if arc[3] is not ARTIFICIAL_END_TRANSITION_LABEL:
                     self.nodes[current_node]['enabled'].add(arc[3])
                 self.add_edge(current_node, self.marking_map[post_marking], firing_sequence=arc[2], label=arc[3],
-                              cost=0 if arc[2][-1] == ARTIFICIAL_END_TRANSITION_NAME else 1)
+                              cost=0 if arc[2][-1] == ARTIFICIAL_END_TRANSITION_NAME else activity_weights[arc[3]]
+                              if activity_weights else 1)
         self.best_worst_cost = nx.dijkstra_path_length(self, self.initial_state, self.final_state, weight='cost')
     """
     def view(self) -> None:
@@ -84,6 +88,16 @@ class TranslucentReachabilityGraph(nx.MultiDiGraph):
 
 def tversky_index(set1: set, set2: set, alpha: float = 2, beta: float = 0) -> float:
     return len(set1.intersection(set2)) / (len(set1.intersection(set2)) + alpha * len(set1.difference(set2)) + beta * len(set2.difference(set1)))
+
+
+def weighted_tversky_index(set1: set, set2: set, weights: dict[str, float], alpha: float = 2, beta: float = 0) -> float:
+    weighted_set1 = {item: weights.get(item, 1) for item in set1}
+    weighted_set2 = {item: weights.get(item, 1) for item in set2}
+    return sum(weighted_set1[item] for item in weighted_set1 if item in weighted_set2) / (
+        sum(weighted_set1[item] for item in weighted_set1 if item in weighted_set2) +
+        alpha * sum(weighted_set1[item] for item in weighted_set1 if item not in weighted_set2) +
+        beta * sum(weighted_set2[item] for item in weighted_set2 if item not in weighted_set1)
+    )
 
 
 class TranslucentAlignmentStateGraph(nx.MultiDiGraph):
