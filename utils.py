@@ -62,14 +62,17 @@ def learn_activity_weights(event_log: EventLog) -> dict[str, float]:
     """
     activity_executed_enabled_dict: dict[str, list[int]] = {}
     for variant, idx_set in get_translucent_trace_variants(event_log).items():
+        enabled_list = set()
         for event in variant:
-            if event[0] not in activity_executed_enabled_dict:
-                activity_executed_enabled_dict[event[0]] = [0, 0]
+            for enabled_activity in event[1]:
+                if enabled_activity not in activity_executed_enabled_dict:
+                    activity_executed_enabled_dict[enabled_activity] = [0, 0]
+                if enabled_activity not in enabled_list:
+                    enabled_list.add(enabled_activity)
+                    activity_executed_enabled_dict[enabled_activity][1] += len(idx_set)
+            enabled_list.intersection_update(event[1])
             activity_executed_enabled_dict[event[0]][0] += len(idx_set)
-            for enabled_event in event[1]:
-                if enabled_event not in activity_executed_enabled_dict:
-                    activity_executed_enabled_dict[enabled_event] = [0, 0]
-                activity_executed_enabled_dict[enabled_event][1] += len(idx_set)
+            enabled_list.remove(event[0])
 
     return {activity: (counts[0] / counts[1]) for activity, counts in activity_executed_enabled_dict.items()}
 

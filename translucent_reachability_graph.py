@@ -14,10 +14,7 @@ from utils import add_artificial_end_transition, ARTIFICIAL_END_TRANSITION_NAME,
 
 
 class TranslucentReachabilityGraph(nx.MultiDiGraph):
-    def __init__(self,
-                 accepting_petri_net: tuple[PetriNet, Marking, Marking],
-                 activity_weights: Optional[dict[str, float]] = None,
-                 ):
+    def __init__(self, accepting_petri_net: tuple[PetriNet, Marking, Marking]):
         if not is_workflow_net(accepting_petri_net[0]):
             raise ValueError("The Petri net is not a workflow net")
 
@@ -61,8 +58,7 @@ class TranslucentReachabilityGraph(nx.MultiDiGraph):
                 if arc[3] is not ARTIFICIAL_END_TRANSITION_LABEL:
                     self.nodes[current_node]['enabled'].add(arc[3])
                 self.add_edge(current_node, self.marking_map[post_marking], firing_sequence=arc[2], label=arc[3],
-                              cost=0 if arc[2][-1] == ARTIFICIAL_END_TRANSITION_NAME else activity_weights[arc[3]]
-                              if activity_weights else 1)
+                              cost=0 if arc[2][-1] == ARTIFICIAL_END_TRANSITION_NAME else 1)
         self.best_worst_cost = nx.dijkstra_path_length(self, self.initial_state, self.final_state, weight='cost')
     """
     def view(self) -> None:
@@ -86,13 +82,13 @@ class TranslucentReachabilityGraph(nx.MultiDiGraph):
             f.truncate()
     """
 
-def tversky_index(set1: set, set2: set, alpha: float = 2, beta: float = 0) -> float:
+def tversky_index(set1: set, set2: set, alpha: float = 1, beta: float = 1) -> float:
     return len(set1.intersection(set2)) / (len(set1.intersection(set2)) + alpha * len(set1.difference(set2)) + beta * len(set2.difference(set1)))
 
 
-def weighted_tversky_index(set1: set, set2: set, weights: dict[str, float], alpha: float = 2, beta: float = 0) -> float:
-    weighted_set1 = {item: weights.get(item, 1) for item in set1}
-    weighted_set2 = {item: weights.get(item, 1) for item in set2}
+def weighted_tversky_index(set1: set, set2: set, weights: dict[str, float], alpha: float = 1, beta: float = 1, default_weight: float = 0) -> float:
+    weighted_set1 = {item: weights.get(item, default_weight) for item in set1}
+    weighted_set2 = {item: weights.get(item, default_weight) for item in set2}
     return sum(weighted_set1[item] for item in weighted_set1 if item in weighted_set2) / (
         sum(weighted_set1[item] for item in weighted_set1 if item in weighted_set2) +
         alpha * sum(weighted_set1[item] for item in weighted_set1 if item not in weighted_set2) +
@@ -101,15 +97,24 @@ def weighted_tversky_index(set1: set, set2: set, weights: dict[str, float], alph
 
 
 class TranslucentAlignmentStateGraph(nx.MultiDiGraph):
-    def __init__(self, translucent_reachability_graph: TranslucentReachabilityGraph, trace: Trace):
+    def __init__(self,
+                 translucent_reachability_graph: TranslucentReachabilityGraph,
+                 trace: Trace,
+                 activity_weights: Optional[dict[str, float]] = None
+                 ):
+        weighted = True if activity_weights else False
+
         super().__init__()
+        self.activity_weights = activity_weights or {}
         self.trace = trace
         self.best_worst_cost = len(trace) + translucent_reachability_graph.best_worst_cost
         self.initial_state = (0, 0)
         self.final_state = (len(trace), 1)
         self.transition_labels = translucent_reachability_graph.transition_labels
 
-        def enabled_set_cost(enabled_set_trace: set[str], enabled_set_model: set[str]) -> float:
+        def enabled_set_cost(enabled_set_trace: set[str], enabled_set_model: set[str], weighted: bool = False) -> float:
+            if weighted:
+                return 1 - weighted_tversky_index(enabled_set_trace, enabled_set_model, activity_weights)
             return 1 - tversky_index(enabled_set_trace, enabled_set_model)
 
         # Add arcs corresponding to moves on model
@@ -139,7 +144,7 @@ class TranslucentAlignmentStateGraph(nx.MultiDiGraph):
                     self.add_edge((idx, edge[0]), (idx + 1, edge[1]),
                                   firing_sequence=edge[2]['firing_sequence'],
                                   label=trace[idx].get('concept:name'),
-                                  cost=enabled_set_cost(trace[idx].get('enabled'), translucent_reachability_graph.nodes[edge[0]]['enabled']),
+                                  cost=enabled_set_cost(trace[idx].get('enabled'), translucent_reachability_graph.nodes[edge[0]]['enabled'], weighted),
                                   classical_cost=0,
                                   type='sync')
         # Add arcs corresponding to execution change moves
@@ -147,7 +152,7 @@ class TranslucentAlignmentStateGraph(nx.MultiDiGraph):
                     self.add_edge((idx, edge[0]), (idx + 1, edge[1]),
                                   firing_sequence=edge[2]['firing_sequence'],
                                   label=trace[idx].get('concept:name'),
-                                  cost=1+enabled_set_cost(trace[idx].get('enabled'), translucent_reachability_graph.nodes[edge[0]]['enabled']),
+                                  cost=1+enabled_set_cost(trace[idx].get('enabled'), translucent_reachability_graph.nodes[edge[0]]['enabled'], weighted),
                                   classical_cost=3,
                                   type='change')
     """
