@@ -9,6 +9,17 @@ A more general view is given in the evaluation.
 
 
 ## Insurance claim log
+For a better overview, we have the activities as follows:
+- "Open":   "a",
+- "Fill":   "b",
+- "Attach": "c",
+- "Review": "d",
+- "Submit": "e",
+- "Cancel": "f",
+- "Support": "g",
+- "Save":   "h".
+
+
 Below, an overview of translucent variants in the event log is provided: 
 
 - ⟨<ins>a</ins>, <ins>b</ins>fgh, <ins>f</ins>cdgh⟩ × 80
