@@ -46,6 +46,19 @@ def get_translucent_trace_variants(event_log: EventLog
     return variants
 
 
+def frequent_activity_weights(event_log: EventLog) -> dict[str, float]:
+    activity_executed_enabled_dict: dict[str, list[int]] = {}
+    for variant, idx_set in get_translucent_trace_variants(event_log).items():
+        for event in variant:
+            if event[0] not in activity_executed_enabled_dict:
+                activity_executed_enabled_dict[event[0]] = [0, 0]
+            activity_executed_enabled_dict[event[0]][0] += len(idx_set)
+            for enabled_event in event[1]:
+                if enabled_event not in activity_executed_enabled_dict:
+                    activity_executed_enabled_dict[enabled_event] = [0, 0]
+                activity_executed_enabled_dict[enabled_event][1] += len(idx_set)
+    return {activity: (counts[0] / counts[1]) for activity, counts in activity_executed_enabled_dict.items()}
+
 def learn_activity_weights(event_log: EventLog) -> dict[str, float]:
     """
     Learn activity weights from the event log.

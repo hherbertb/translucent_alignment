@@ -4,7 +4,7 @@ from pm4py.objects.log.obj import Trace
 from translucent_reachability_graph import TranslucentReachabilityGraph, TranslucentAlignmentStateGraph
 
 
-def align(translucent_trace: Trace, translucent_reachability_graph: TranslucentReachabilityGraph, ignore_translucent: bool = False, activity_weights: dict[str, float] | None = None):
+def align(translucent_trace: Trace, translucent_reachability_graph: TranslucentReachabilityGraph, ignore_translucent: bool = False, activity_weights=None):
     # Check if the trace is enriched with translucent information
     if not all('enabled' in event for event in translucent_trace):
         raise ValueError("The trace is not enriched with translucent information")
