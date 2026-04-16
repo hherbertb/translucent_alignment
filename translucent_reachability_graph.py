@@ -1,5 +1,3 @@
-from typing import Optional
-
 import networkx as nx
 #from bs4 import BeautifulSoup
 from pm4py import PetriNet, Marking
@@ -14,13 +12,14 @@ from utils import add_artificial_end_transition, ARTIFICIAL_END_TRANSITION_NAME,
 
 
 class TranslucentReachabilityGraph(nx.MultiDiGraph):
-    def __init__(self, accepting_petri_net: tuple[PetriNet, Marking, Marking]):
+    def __init__(self, accepting_petri_net: tuple[PetriNet, Marking, Marking]) -> None:
         if not is_workflow_net(accepting_petri_net[0]):
             raise ValueError("The Petri net is not a workflow net")
 
         accepting_petri_net = add_artificial_end_transition(accepting_petri_net)
         super().__init__()
-        self.transition_labels = {transition.name: transition.label for transition in accepting_petri_net[0].transitions}
+        self.transition_labels = {transition.name: transition.label
+                                  for transition in accepting_petri_net[0].transitions}
         self.marking_map = {accepting_petri_net[1]: 0, accepting_petri_net[2]: 1}
         self.initial_state = 0
         self.final_state = 1
@@ -31,7 +30,7 @@ class TranslucentReachabilityGraph(nx.MultiDiGraph):
         def get_arcs_from_enabled_transitions(petri_net: PetriNet,
                                               marking: Marking,
                                               visited_states: set[Marking],
-                                              firing_sequence: Optional[tuple[str, ...]] = None,
+                                              firing_sequence: tuple[str, ...] | None = None,
                                               ) -> set[tuple[Marking, Marking, tuple[str, ...], str]]:
             if firing_sequence is None:
                 firing_sequence = tuple()
@@ -82,26 +81,36 @@ class TranslucentReachabilityGraph(nx.MultiDiGraph):
             f.truncate()
     """
 
-def tversky_index(set1: set, set2: set, alpha: float = 2, beta: float = 0) -> float:
-    return len(set1.intersection(set2)) / (len(set1.intersection(set2)) + alpha * len(set1.difference(set2)) + beta * len(set2.difference(set1))) if len(set1.intersection(set2)) >0 else 0
+def tversky_index(set1: set, set2: set, alpha: float = 1, beta: float = 1) -> float:
+    return (len(set1.intersection(set2))
+            / (len(set1.intersection(set2))
+               + alpha * len(set1.difference(set2))
+               + beta * len(set2.difference(set1)))
+            ) if len(set1.intersection(set2)) > 0 else 0
 
 
-def weighted_tversky_index(set1: set, set2: set, weights: dict[str, float], alpha: float = 2, beta: float = 0, default_weight: float = 0) -> float:
+def weighted_tversky_index(set1: set,
+                           set2: set,
+                           weights: dict[str, float],
+                           alpha: float = 1,
+                           beta: float = 1,
+                           default_weight: float = 0
+                           ) -> float:
     weighted_set1 = {item: weights.get(item, default_weight) for item in set1}
     weighted_set2 = {item: weights.get(item, default_weight) for item in set2}
-    return sum(weighted_set1[item] for item in weighted_set1 if item in weighted_set2) / (
-        sum(weighted_set1[item] for item in weighted_set1 if item in weighted_set2) +
-        alpha * sum(weighted_set1[item] for item in weighted_set1 if item not in weighted_set2) +
-        beta * sum(weighted_set2[item] for item in weighted_set2 if item not in weighted_set1)
-    ) if len(set1.intersection(set2)) > 0 else 0
+    return (sum(weighted_set1[item] for item in weighted_set1 if item in weighted_set2)
+            / (sum(weighted_set1[item] for item in weighted_set1 if item in weighted_set2)
+               + alpha * sum(weighted_set1[item] for item in weighted_set1 if item not in weighted_set2)
+               + beta * sum(weighted_set2[item] for item in weighted_set2 if item not in weighted_set1)
+               )) if len(set1.intersection(set2)) > 0 else 0
 
 
 class TranslucentAlignmentStateGraph(nx.MultiDiGraph):
     def __init__(self,
                  translucent_reachability_graph: TranslucentReachabilityGraph,
                  trace: Trace,
-                 activity_weights: Optional[dict[str, float]] = None
-                 ):
+                 activity_weights: dict[str, float] | None = None
+                 ) -> None:
         weighted = True if activity_weights else False
 
         super().__init__()
@@ -120,13 +129,15 @@ class TranslucentAlignmentStateGraph(nx.MultiDiGraph):
         # Add arcs corresponding to moves on model
         for idx in range(len(trace) + 1):
             for node in translucent_reachability_graph.nodes:
-                self.add_node((idx, node), marking=translucent_reachability_graph.nodes[node]['marking'], enabled=translucent_reachability_graph.nodes[node]['enabled'])
+                self.add_node((idx, node),
+                              marking=translucent_reachability_graph.nodes[node]['marking'],
+                              enabled=translucent_reachability_graph.nodes[node]['enabled'])
             for edge in translucent_reachability_graph.edges:
                 self.add_edge((idx, edge[0]), (idx, edge[1]),
                               firing_sequence=translucent_reachability_graph.edges[edge]['firing_sequence'],
                               label=None,
                               cost=translucent_reachability_graph.edges[edge]['cost'],
-                              classical_cost=translucent_reachability_graph.edges[edge]['cost'],
+                              classic_cost=translucent_reachability_graph.edges[edge]['cost'],
                               type='model')
         # Add arcs corresponding to moves on log
         for idx in range(len(trace)):
@@ -135,7 +146,7 @@ class TranslucentAlignmentStateGraph(nx.MultiDiGraph):
                               firing_sequence=(),
                               label=trace[idx].get('concept:name'),
                               cost=1,
-                              classical_cost=1,
+                              classic_cost=1,
                               type='log')
         # Add arcs corresponding to synchronous moves
         for idx in range(len(trace)):
@@ -144,16 +155,20 @@ class TranslucentAlignmentStateGraph(nx.MultiDiGraph):
                     self.add_edge((idx, edge[0]), (idx + 1, edge[1]),
                                   firing_sequence=edge[2]['firing_sequence'],
                                   label=trace[idx].get('concept:name'),
-                                  cost=enabled_set_cost(trace[idx].get('enabled'), translucent_reachability_graph.nodes[edge[0]]['enabled'], weighted),
-                                  classical_cost=0,
+                                  cost=enabled_set_cost(trace[idx].get('enabled'),
+                                                        translucent_reachability_graph.nodes[edge[0]]['enabled'],
+                                                        weighted),
+                                  classic_cost=0,
                                   type='sync')
         # Add arcs corresponding to execution change moves
                 elif edge[2]['label'] != ARTIFICIAL_END_TRANSITION_LABEL:
                     self.add_edge((idx, edge[0]), (idx + 1, edge[1]),
                                   firing_sequence=edge[2]['firing_sequence'],
                                   label=trace[idx].get('concept:name'),
-                                  cost=1+enabled_set_cost(trace[idx].get('enabled'), translucent_reachability_graph.nodes[edge[0]]['enabled'], weighted),
-                                  classical_cost=3,
+                                  cost=1+enabled_set_cost(trace[idx].get('enabled'),
+                                                          translucent_reachability_graph.nodes[edge[0]]['enabled'],
+                                                          weighted),
+                                  classic_cost=3,
                                   type='change')
     """
     def view(self) -> None:
@@ -182,7 +197,10 @@ class TranslucentAlignmentStateGraph(nx.MultiDiGraph):
             f.truncate()
     """
     def get_optimal_alignment_cost(self, ignore_translucent: bool = False) -> float:
-        return nx.dijkstra_path_length(self, self.initial_state, self.final_state, weight='classical_cost' if ignore_translucent else 'cost')
+        return nx.dijkstra_path_length(self,
+                                       self.initial_state,
+                                       self.final_state,
+                                       weight='classic_cost' if ignore_translucent else 'cost')
 
     def get_optimal_alignment(self, ignore_translucent: bool = False) -> AlignmentResult:
         alignment = []
@@ -191,10 +209,15 @@ class TranslucentAlignmentStateGraph(nx.MultiDiGraph):
         move_cost = []
         trace_idx = 0
         n_sync, n_log, n_model, n_silent, n_enabled_change, n_execution_change, n_execution_enabled_change = 0, 0, 0, 0, 0, 0, 0
-        for u, v in nx.utils.pairwise(nx.dijkstra_path(self, self.initial_state, self.final_state, weight='classical_cost' if ignore_translucent else 'cost')):
-            edge = (u, v, min(self[u][v], key=lambda k: self[u][v][k].get('classical_cost' if ignore_translucent else 'cost', 1)))
+        for u, v in nx.utils.pairwise(nx.dijkstra_path(self,
+                                                       self.initial_state,
+                                                       self.final_state,
+                                                       weight='classic_cost' if ignore_translucent else 'cost')):
+            edge = (u, v, min(self[u][v],
+                              key=lambda k: self[u][v][k].get('classic_cost' if ignore_translucent else 'cost', 1)))
             edge_data = self.edges[edge]
-            if (firing_sequence := edge_data.get('firing_sequence')) and firing_sequence[-1] == ARTIFICIAL_END_TRANSITION_NAME:
+            if ((firing_sequence := edge_data.get('firing_sequence')) and
+                    firing_sequence[-1] == ARTIFICIAL_END_TRANSITION_NAME):
                 continue
             # Add silent moves to the alignment
             alignment.extend([(SKIP, None)] * (len(firing_sequence) - 1))
@@ -202,8 +225,12 @@ class TranslucentAlignmentStateGraph(nx.MultiDiGraph):
             move_cost.extend([0] * (len(firing_sequence) - 1))
             n_silent += len(firing_sequence) - 1 if len(firing_sequence) > 1 else 0
             # Add other moves to the alignment
-            alignment.append((label if (label := edge_data.get('label')) else SKIP, self.transition_labels[firing_sequence[-1]] if firing_sequence else SKIP))
-            translucent_alignment.append(((label if label else SKIP, self.trace[trace_idx]['enabled'] if label else set()), (self.transition_labels[firing_sequence[-1]] if firing_sequence else SKIP, self.nodes[u]['enabled'])))
+            alignment.append((label if (label := edge_data.get('label')) else SKIP,
+                              self.transition_labels[firing_sequence[-1]] if firing_sequence else SKIP))
+            translucent_alignment.append(((label if label else SKIP,
+                                           self.trace[trace_idx]['enabled'] if label else set()),
+                                          (self.transition_labels[firing_sequence[-1]] if firing_sequence else SKIP,
+                                           self.nodes[u]['enabled'])))
             if label:
                 if firing_sequence:
                     # Synchronous move, enabled change move, execution change move, execution enabled change move
@@ -230,8 +257,8 @@ class TranslucentAlignmentStateGraph(nx.MultiDiGraph):
             else:
                 # Model move
                 n_model += 1
-            cost += edge_data.get('classical_cost' if ignore_translucent else 'cost')
-            move_cost.append(edge_data.get('classical_cost' if ignore_translucent else 'cost'))
+            cost += edge_data.get('classic_cost' if ignore_translucent else 'cost')
+            move_cost.append(edge_data.get('classic_cost' if ignore_translucent else 'cost'))
         return {
             'alignment': alignment,
             'cost': cost,
